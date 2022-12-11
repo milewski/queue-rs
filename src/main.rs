@@ -2,19 +2,11 @@ use std::sync::{Arc, Mutex};
 use std::thread::{JoinHandle, sleep, spawn};
 use std::time::{Duration, Instant};
 
-struct Task {
-    before_start: Box<dyn Fn() -> () + Send>,
-    callable: Box<dyn Fn() -> () + Send>,
-    on_complete: Box<dyn Fn() -> () + Send>,
-}
+struct Task(Box<dyn Fn() -> () + Send>);
 
 impl Task {
     fn new(callable: Box<dyn Fn() -> () + Send>) -> Task {
-        Task {
-            callable,
-            before_start: Box::new(|| {}),
-            on_complete: Box::new(|| {}),
-        }
+        Task(callable)
     }
 }
 
@@ -76,11 +68,7 @@ impl QueueExecutor {
 
                 for task in callbacks {
                     active_tasks_count += 1;
-                    handles.push(spawn(move || {
-                        (task.before_start)();
-                        (task.callable)();
-                        (task.on_complete)();
-                    }));
+                    handles.push(spawn(move || task.0()));
                 }
 
                 for handle in handles {
